@@ -9,7 +9,7 @@
 /*run;*/
 
 data whims_clean;
-set rdata;
+set whims_comb_nona;
 
 record_ID=strip(record_ID);
 
@@ -963,8 +963,8 @@ if risk3~=. and phys_date~=. then do;
 if phys_date-risk3<=3 then sex_3d=1;  /*condomless sex within 3 day*/
 else if phys_date-risk3>3 then sex_3d=0;
 
-if phys_date-risk3<=1 then sex_3d=1;  /*condomless sex within 3 day*/
-else if phys_date-risk3>1 then sex_3d=0;
+if phys_date-risk3<=1 then sex_1d=1;  /*condomless sex within 3 day*/
+else if phys_date-risk3>1 then sex_1d=0;
 
 end;
 
@@ -973,10 +973,37 @@ if phys_date-vp2<=3 then ivp_3d=1;
 else if phys_date-vp2>3 then ivp_3d=0;
 end;
 
+/*Third, Nugent (nugent_lab) coded into positive (Nugent score 7 or above) or negative. */
+if nugent_lab>=7 then Bin_nugent_lab=1;
+else if 0<=nugent_lab<7 then Bin_nugent_lab=0;
+
+/*Then, can create this variable: (1) Nugent+Amsel+, (2) Nugent-Amsel-, (3) Nugent+Amsel-, (3) Nugent-Amsel+*/
+Cat_Nugent_Amsel=catx("_", Bin_nugent_lab, amsel_lab);
+
+/*1 = Clinical and Lab confirmed; 3 = Lab Confirmed; 4 = Clinical Confirmed --> 1,3,4 = BV+*/
+/**/
+/*Pan in SAS this is coded as BV (for clinical, lab, or both confirmed as categories). Would code a new BV variable as IF 1,3,4 then BV+*/
+if Bin_nugent_lab ne . and  amsel_lab ne . then do ;
+	if Bin_nugent_lab = 0 and amsel_lab=0 then Bin_BV_CLconfim=0;
+    else  Bin_BV_CLconfim=1;
+	end;
+
 format vp2 risk3 mmddyy10.;
 run;
 
-proc freq data=whims_psa
+
+proc sort data=whims_psa;
+by risk5;
+run;
+
+proc freq data=whims_psa;
+/*by risk5;*/
+tables risk5 sex_3d sex_1d sex_3d*risk3 Cat_Nugent_Amsel Bin_BV_CLconfim ivp_3d;
+/*where risk5=3;*/
+run; 
+/*60 women has 3 day condomless sex within 3 day and 29 within 1 day*/
+
+
 
 
 
@@ -985,8 +1012,17 @@ proc freq data=whims_psa
 proc freq data=whims_psa;
 table psa_lab /*Prostate Specific Antigen Result*/ 
 risk5 /*When you had vaginal intercourse in the last month, how many times did your male partner use a male condom or any type of protection?*/
+vp1
+ivp_3d
 sex_3d*psa_lab
-ivp_3d*psa_lab medgyn0;
+ivp_3d*psa_lab medgyn0
+nugent_lab
+discharge_lab
+clue_cell_lab
+whiff_lab
+ph_lab
+
+;
 run;
 
 proc print data=whims_psa;
