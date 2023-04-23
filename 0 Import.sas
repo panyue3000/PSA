@@ -958,6 +958,9 @@ run;
 ;
 data whims_psa;
 set whims_clean_v3;
+
+if vp1=0 then vp2=-9999999;
+
 if redcap_event_name~="baseline_arm_1" then DELETE;
 if risk3~=. and phys_date~=. then do;
 if phys_date-risk3<=3 then sex_3d=1;  /*condomless sex within 3 day*/
@@ -965,17 +968,26 @@ else if phys_date-risk3>3 then sex_3d=0;
 
 if phys_date-risk3<=1 then sex_1d=1;  /*condomless sex within 3 day*/
 else if phys_date-risk3>1 then sex_1d=0;
+end;
 
 if vp1=0 then vp2=-99999;
 if vp2-risk3>=0 then Bin_Sex_ivp =1;   /*ivp occus after or same day of condomeless sex*/
 else if .<vp2-risk3<=0 then Bin_Sex_ivp =0;
 
-end;
 
 if vp2~=. and phys_date~=. then do;
 if phys_date-vp2<=3 then ivp_3d=1;
 else if phys_date-vp2>3 then ivp_3d=0;
 end;
+
+/*create PSA and Sex table*/
+
+if PSA_lab ne . and sex_3d ne . then do
+Cat_PSA_sex3d=catx("_", PSA_lab, sex_3d); end;
+
+if PSA_lab ne . and sex_1d ne . then do
+Cat_PSA_sex1d=catx("_", PSA_lab, sex_1d); end;
+
 
 /*Third, Nugent (nugent_lab) coded into positive (Nugent score 7 or above) or negative. */
 if nugent_lab>=7 then Bin_nugent_lab=1;
@@ -986,13 +998,30 @@ Cat_Nugent_Amsel=catx("_", Bin_nugent_lab, amsel_lab);
 
 /*1 = Clinical and Lab confirmed; 3 = Lab Confirmed; 4 = Clinical Confirmed --> 1,3,4 = BV+*/
 /**/
-/*Pan in SAS this is coded as BV (for clinical, lab, or both confirmed as categories). Would code a new BV variable as IF 1,3,4 then BV+*/
+/*Pan in SAS this is coded as BV (for clinical, lab, or both confirmed as categories). 
+Would code a new BV variable as IF 1,3,4 then BV+*/
 if Bin_nugent_lab ne . and  amsel_lab ne . then do ;
 	if Bin_nugent_lab = 0 and amsel_lab=0 then Bin_BV_CLconfim=0;
     else  Bin_BV_CLconfim=1;
 	end;
 
+/*combine 0_1 or 1_0 as disagreement, and  1_1 as concordance */
+if Bin_nugent_lab ne . and  amsel_lab ne . then do ;
+	if Bin_nugent_lab = 1 and amsel_lab=1 then Bin_BV_AMSEL_concord=1;
+    else  if Bin_nugent_lab = 1 or amsel_lab=1 then Bin_BV_AMSEL_concord=0;
+	end;
+
+
+
 format vp2 risk3 mmddyy10.;
+
+label Bin_Sex_ivp = "ivp occus after or same day of condomeless sex"
+	  sex_3d="condomless sex within 3 days of PSA"
+	  sex_1d="condomless sex within 1 days of PSA"
+	  Cat_PSA_sex3d="PSA and condomless sex within 3 days category"
+	  Cat_PSA_sex1d="PSA and condomless sex within 1 days category"
+
+;
 run;
 
 
@@ -1002,7 +1031,7 @@ run;
 
 proc freq data=whims_psa;
 /*by risk5;*/
-tables vp2 risk3 Bin_Sex_ivp risk5 sex_3d sex_1d sex_3d*risk3 Cat_Nugent_Amsel Bin_BV_CLconfim ivp_3d;
+tables vp2 risk3 Bin_Sex_ivp Cat_PSA_sex3d Cat_PSA_sex1d risk5 sex_3d sex_1d sex_3d*risk3 Cat_Nugent_Amsel Bin_BV_CLconfim ivp_3d;
 /*where risk5=3;*/
 run; 
 /*60 women has 3 day condomless sex within 3 day and 29 within 1 day*/
