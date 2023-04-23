@@ -966,6 +966,10 @@ else if phys_date-risk3>3 then sex_3d=0;
 if phys_date-risk3<=1 then sex_1d=1;  /*condomless sex within 3 day*/
 else if phys_date-risk3>1 then sex_1d=0;
 
+if vp1=0 then vp2=-99999;
+if vp2-risk3>=0 then Bin_Sex_ivp =1;   /*ivp occus after or same day of condomeless sex*/
+else if .<vp2-risk3<=0 then Bin_Sex_ivp =0;
+
 end;
 
 if vp2~=. and phys_date~=. then do;
@@ -998,7 +1002,7 @@ run;
 
 proc freq data=whims_psa;
 /*by risk5;*/
-tables risk5 sex_3d sex_1d sex_3d*risk3 Cat_Nugent_Amsel Bin_BV_CLconfim ivp_3d;
+tables vp2 risk3 Bin_Sex_ivp risk5 sex_3d sex_1d sex_3d*risk3 Cat_Nugent_Amsel Bin_BV_CLconfim ivp_3d;
 /*where risk5=3;*/
 run; 
 /*60 women has 3 day condomless sex within 3 day and 29 within 1 day*/
